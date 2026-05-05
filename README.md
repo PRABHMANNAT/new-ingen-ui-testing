@@ -1,8 +1,8 @@
-# Talent Search Command Center
+# Talent Search Dashboard
 
 ## PM artifact LLM fallback
 
-The `/pm` Command Center calls providers only from the server route `app/api/pm/chat/route.ts`. No API keys are sent to the client bundle.
+The `/pm` Dashboard calls providers only from the server route `app/api/pm/chat/route.ts`. No API keys are sent to the client bundle.
 
 Fallback order:
 

@@ -13,7 +13,7 @@ function sse(event: string, data: unknown) {
 }
 
 async function produceEnvelope(messages: LLMMessage[], signal?: AbortSignal): Promise<{ envelope: ArtifactEnvelope; provider: string; fallback?: boolean }> {
-  const latestUser = [...messages].reverse().find((m) => m.role === "user")?.content || "Command Center request"
+  const latestUser = [...messages].reverse().find((m) => m.role === "user")?.content || "Dashboard request"
 
   try {
     const first = await generate(messages, { signal })

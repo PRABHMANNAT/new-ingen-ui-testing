@@ -1,607 +1,361 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef, useState } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { AnimatePresence, motion } from "framer-motion"
-import {
-  ArrowUp,
-  Bot,
-  Clock3,
-  Network,
-  PanelRight,
-  RefreshCcw,
-  Search,
-  Sparkles,
-  X,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { InfographicArtifact, type ArtifactVersion } from "@/components/artifact/InfographicArtifact"
-import SystemAutonomyWidget from "@/app/pm/components/SystemAutonomyWidget"
-import { useConversation, type PMConversationMessage } from "./useConversation"
+import React, { useState } from "react"
+import { motion } from "framer-motion"
+import { MiniCalendar } from "@/components/dashboard/MiniCalendar"
+import { UpcomingInterviews } from "@/components/dashboard/UpcomingInterviews"
+import { BrandOrbLoader } from "@/components/BrandOrbLoader"
+import { ThemedCanvas } from "@/components/layout/ThemedCanvas"
+import { useAppTheme } from "@/components/theme/ThemeProvider"
 
-const QUICK_PROMPTS = [
-  "Map the ML engineer market",
-  "Compare senior Rust signals",
-  "Build an outreach strategy",
-  "Show proof gaps for candidates",
-]
+function useDashboardTheme() {
+  const { theme } = useAppTheme()
+  const isDark = theme === "dark"
 
-const ARISTOTLE = "Aristotle"
-
-type ContextTab = "focus" | "graph" | "autopilot"
-
-export default function PMPage() {
-  const {
-    messages,
-    input,
-    setInput,
-    isThinking,
-    provider,
-    activeArtifact,
-    activeArtifactId,
-    artifactMessages,
-    setActiveArtifactId,
-    submit,
-    sendPrompt,
-    drill,
-    reset,
-  } = useConversation()
-
-  const [contextOpen, setContextOpen] = useState(false)
-  const [contextTab, setContextTab] = useState<ContextTab>("focus")
-  const inputRef = useRef<HTMLInputElement>(null)
-  const endRef = useRef<HTMLDivElement>(null)
-
-  const versions = useMemo<ArtifactVersion[]>(() => {
-    return artifactMessages
-      .filter((message) => message.artifact)
-      .slice()
-      .reverse()
-      .map((message) => ({
-        id: message.id,
-        title: message.artifact?.artifact.title || "Artifact",
-        createdAt: message.createdAt,
-        envelope: message.artifact!,
-      }))
-  }, [artifactMessages])
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
-  }, [messages.length, isThinking])
-
-  useEffect(() => {
-    const handleKeydown = (event: KeyboardEvent) => {
-      const command = event.metaKey || event.ctrlKey
-      if (!command) return
-
-      if (event.key.toLowerCase() === "k") {
-        event.preventDefault()
-        inputRef.current?.focus()
-      }
-
-      if (event.key === "Enter") {
-        event.preventDefault()
-        submit()
-      }
-    }
-
-    window.addEventListener("keydown", handleKeydown)
-    return () => window.removeEventListener("keydown", handleKeydown)
-  }, [submit])
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    submit()
+  return {
+    isDark,
+    pageBg: isDark ? "bg-[#050505] text-white" : "bg-[#F7F2EA] text-[#2A2520]",
+    grid: isDark
+      ? "bg-[linear-gradient(to_right,#1A1A1A_1px,transparent_1px),linear-gradient(to_bottom,#1A1A1A_1px,transparent_1px)] opacity-55"
+      : "bg-[linear-gradient(to_right,#DED4C733_1px,transparent_1px),linear-gradient(to_bottom,#DED4C733_1px,transparent_1px)] opacity-35",
+    card: isDark
+      ? "border-[#242424] bg-[#101010] shadow-[0_18px_50px_rgba(0,0,0,0.28)]"
+      : "border-[#DED4C7] bg-[#FBF7EF] shadow-[0_18px_50px_rgba(42,37,32,0.06)]",
+    row: isDark ? "bg-[#1C1C1C]" : "bg-[#FFFDF8]",
+    mutedBox: isDark ? "bg-[#1C1C1C]" : "bg-[#EEE8DF]/70",
+    text: isDark ? "text-white" : "text-[#2A2520]",
+    muted: isDark ? "text-[#A0A0A0]" : "text-[#7A7168]",
+    faint: isDark ? "text-[#777]" : "text-[#8A8177]",
+    border: isDark ? "border-[#242424]" : "border-[#DED4C7]",
+    vars: isDark
+      ? {
+          "--pm-bg": "#050505",
+          "--pm-card": "#101010",
+          "--pm-row": "#1C1C1C",
+          "--pm-text": "#ffffff",
+          "--pm-muted": "#A0A0A0",
+          "--pm-subtle": "#777777",
+          "--pm-border": "#242424",
+          "--pm-chip": "#1C1C1C",
+          "--pm-accent": "#FF6A00",
+        }
+      : {
+          "--pm-bg": "#F7F2EA",
+          "--pm-card": "#FBF7EF",
+          "--pm-row": "#FFFDF8",
+          "--pm-text": "#2A2520",
+          "--pm-muted": "#7A7168",
+          "--pm-subtle": "#8A8177",
+          "--pm-border": "#DED4C7",
+          "--pm-chip": "#EEE8DF",
+          "--pm-accent": "#FF6A00",
+        },
   }
+}
 
-  const servedArtifacts = artifactMessages.length
-
+export default function DashboardPage() {
   return (
-    <main className="pm-command-surface relative flex-1 overflow-hidden bg-[var(--pm-bg)] text-[var(--pm-text)] font-mono selection:bg-[var(--pm-focus)]">
-      <div className="pm-grid absolute inset-0 pointer-events-none" />
-
-      <div className="relative z-10 grid h-full min-h-0 grid-cols-1 lg:grid-cols-[minmax(340px,420px)_minmax(0,1fr)]">
-        <ConversationColumn
-          messages={messages}
-          input={input}
-          setInput={setInput}
-          inputRef={inputRef}
-          isThinking={isThinking}
-          activeArtifactId={activeArtifactId}
-          onSubmit={handleSubmit}
-          onSelectArtifact={setActiveArtifactId}
-          onReset={reset}
-          onQuickPrompt={sendPrompt}
-          endRef={endRef}
-        />
-
-        <section className="relative min-h-0 overflow-hidden">
-          <header className="absolute left-0 right-0 top-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--pm-border)] bg-[var(--pm-panel)] px-5 py-4 backdrop-blur-xl lg:px-7">
-            <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] uppercase tracking-[0.28em] text-[var(--pm-subtle)]">Artifact Canvas</span>
-                <StatusPill provider={provider} />
-              </div>
-              <h1 className="mt-1 truncate text-xl font-light tracking-tight text-[var(--pm-text)]">
-                {activeArtifact?.artifact.title || "Ask Aristotle for an infographic"}
-              </h1>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setContextOpen((open) => !open)}
-                className="artifact-toolbar-btn"
-                aria-expanded={contextOpen}
-                aria-controls="pm-context-drawer"
-              >
-                <PanelRight className="h-4 w-4" />
-                Context
-              </button>
-              <button type="button" onClick={reset} className="artifact-toolbar-btn">
-                <RefreshCcw className="h-4 w-4" />
-                Reset
-              </button>
-            </div>
-          </header>
-
-          <div className="absolute inset-0 pt-[92px]">
-            <InfographicArtifact
-              envelope={activeArtifact}
-              versions={versions}
-              activeVersionId={activeArtifactId}
-              onVersionSelect={setActiveArtifactId}
-              onDrill={drill}
-              className="h-full"
-            />
-          </div>
-
-          <AnimatePresence>
-            {isThinking && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 z-40 flex items-center justify-center bg-[var(--pm-bg)]/72 backdrop-blur-md"
-              >
-                <ThinkingCard providerName={provider.name} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {contextOpen && (
-              <motion.aside
-                id="pm-context-drawer"
-                initial={{ x: 420, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 420, opacity: 0 }}
-                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute bottom-0 right-0 top-0 z-50 flex w-full max-w-[420px] flex-col border-l border-[var(--pm-border)] bg-[var(--pm-card)] shadow-2xl shadow-[#241f18]/10 backdrop-blur-2xl dark:shadow-black/50"
-              >
-                <div className="flex items-center justify-between border-b border-[var(--pm-border)] px-5 py-4">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--pm-subtle)]">PM Widgets</div>
-                    <div className="mt-1 text-lg font-light text-[var(--pm-text)]">Context drawer</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setContextOpen(false)}
-                    className="rounded-full bg-[var(--pm-chip)] p-2 text-[var(--pm-muted)] transition hover:text-[var(--pm-text)]"
-                    aria-label="Close context drawer"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="flex gap-2 border-b border-[var(--pm-border)] px-5 py-3">
-                  {([
-                    ["focus", "Focus"],
-                    ["graph", "Graph"],
-                    ["autopilot", "Autopilot"],
-                  ] as const).map(([tab, label]) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setContextTab(tab)}
-                      className={cn(
-                        "rounded-full px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] transition",
-                        contextTab === tab
-                          ? "bg-[var(--pm-accent)] text-white shadow-[0_0_20px_var(--pm-accent-glow)]"
-                          : "bg-[var(--pm-chip)] text-[var(--pm-muted)] hover:text-[var(--pm-text)]"
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-5">
-                  {contextTab === "focus" && <ActiveFocus servedArtifacts={servedArtifacts} />}
-                  {contextTab === "graph" && <KnowledgeGraph />}
-                  {contextTab === "autopilot" && <SystemAutonomyWidget />}
-                </div>
-              </motion.aside>
-            )}
-          </AnimatePresence>
-        </section>
-      </div>
-
-      <style jsx global>{`
-        .pm-command-surface {
-          --pm-bg: #f7f3ec;
-          --pm-panel: rgba(250, 247, 241, 0.78);
-          --pm-card: rgba(255, 250, 242, 0.94);
-          --pm-text: #241f18;
-          --pm-text-soft: rgba(36, 31, 24, 0.82);
-          --pm-muted: rgba(36, 31, 24, 0.58);
-          --pm-subtle: rgba(36, 31, 24, 0.38);
-          --pm-border: rgba(116, 96, 72, 0.2);
-          --pm-input: rgba(255, 252, 247, 0.94);
-          --pm-chip: rgba(36, 31, 24, 0.055);
-          --pm-chip-hover: rgba(226, 97, 18, 0.1);
-          --pm-placeholder: rgba(36, 31, 24, 0.34);
-          --pm-accent: #df5f12;
-          --pm-accent-hover: #c94f0b;
-          --pm-accent-glow: rgba(223, 95, 18, 0.28);
-          --pm-focus: rgba(223, 95, 18, 0.34);
-          --pm-loader: #1f2937;
-          --pm-tooltip-bg: rgba(255, 250, 242, 0.96);
-        }
-
-        .dark .pm-command-surface {
-          --pm-bg: #050505;
-          --pm-panel: rgba(5, 5, 5, 0.7);
-          --pm-card: rgba(10, 10, 10, 0.92);
-          --pm-text: #ffffff;
-          --pm-text-soft: rgba(255, 255, 255, 0.82);
-          --pm-muted: rgba(255, 255, 255, 0.5);
-          --pm-subtle: rgba(255, 255, 255, 0.28);
-          --pm-border: rgba(255, 255, 255, 0.06);
-          --pm-input: #0a0a0a;
-          --pm-chip: rgba(255, 255, 255, 0.05);
-          --pm-chip-hover: rgba(255, 107, 0, 0.1);
-          --pm-placeholder: rgba(255, 255, 255, 0.2);
-          --pm-accent: #ff6b00;
-          --pm-accent-hover: #ff7f22;
-          --pm-accent-glow: rgba(255, 107, 0, 0.34);
-          --pm-focus: rgba(255, 107, 0, 0.4);
-          --pm-loader: #ffffff;
-          --pm-tooltip-bg: rgba(0, 0, 0, 0.8);
-        }
-
-        .pm-grid {
-          background-image:
-            linear-gradient(rgba(36, 31, 24, 0.035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(36, 31, 24, 0.035) 1px, transparent 1px);
-          background-size: 40px 40px;
-        }
-
-        .dark .pm-grid {
-          background-image:
-            linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-        }
-
-        .artifact-toolbar-btn {
-          display: inline-flex;
-          height: 2.25rem;
-          align-items: center;
-          justify-content: center;
-          gap: 0.45rem;
-          border-radius: 999px;
-          border: 1px solid var(--pm-border);
-          background: var(--pm-chip);
-          padding: 0 0.85rem;
-          color: var(--pm-muted);
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-          font-size: 0.72rem;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          transition: color 180ms ease, background 180ms ease, border-color 180ms ease, transform 180ms ease;
-        }
-
-        .artifact-toolbar-btn:hover {
-          color: var(--pm-text);
-          background: var(--pm-chip-hover);
-          border-color: var(--pm-focus);
-          transform: translateY(-1px);
-        }
-      `}</style>
-    </main>
+    <ThemedCanvas>
+      <DashboardCanvas />
+    </ThemedCanvas>
   )
 }
 
-function ConversationColumn({
-  messages,
-  input,
-  setInput,
-  inputRef,
-  isThinking,
-  activeArtifactId,
-  onSubmit,
-  onSelectArtifact,
-  onReset,
-  onQuickPrompt,
-  endRef,
+function DashboardCanvas() {
+  const [selectedInterviewDate, setSelectedInterviewDate] = useState<Date | null>(null)
+  const t = useDashboardTheme()
+
+  return (
+    <div className="relative mx-auto max-w-[1360px] pb-12" style={t.vars as React.CSSProperties}>
+      <DashboardHeader />
+      <div className="mt-5 grid grid-cols-12 gap-4">
+        <div className="col-span-12 xl:col-span-5">
+          <CalendarCard selectedDate={selectedInterviewDate} onSelectDate={setSelectedInterviewDate} />
+        </div>
+        <div className="col-span-12 xl:col-span-7">
+          <UpcomingInterviewsCard selectedDate={selectedInterviewDate} />
+        </div>
+        <div className="col-span-12 md:col-span-4">
+          <TeamCard />
+        </div>
+        <div className="col-span-12 md:col-span-4">
+          <HiringBudgetCard />
+        </div>
+        <div className="col-span-12 md:col-span-4">
+          <SpendBreakdownCard />
+        </div>
+        <div className="col-span-12 xl:col-span-5">
+          <HiringActionsCard />
+        </div>
+        <div className="col-span-12 md:col-span-5 xl:col-span-3">
+          <PipelineCard />
+        </div>
+        <div className="col-span-12 md:col-span-7 xl:col-span-4">
+          <AristotleInsightCard />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DashboardHeader() {
+  const t = useDashboardTheme()
+
+  return (
+    <div className="flex items-end justify-between gap-6">
+      <div>
+        <p className={`text-[11px] font-black uppercase tracking-[0.32em] ${t.faint}`}>Startup Hiring</p>
+        <h1 className={`mt-1 text-[42px] font-black leading-none tracking-[-0.08em] ${t.text}`}>Dashboard</h1>
+        <p className={`mt-2 text-[12px] font-bold tracking-[-0.03em] ${t.muted}`}>
+          Interviews, budget, team capacity, and recruiting actions.
+        </p>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        <button className={`rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] ${t.border} ${t.row} ${t.muted}`}>
+          May 2026
+        </button>
+        <button className="rounded-full bg-[#FF6A00] px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white">
+          New Search
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function CalendarCard({
+  selectedDate,
+  onSelectDate,
 }: {
-  messages: PMConversationMessage[]
-  input: string
-  setInput: (value: string) => void
-  inputRef: React.RefObject<HTMLInputElement | null>
-  isThinking: boolean
-  activeArtifactId: string | null
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
-  onSelectArtifact: (id: string) => void
-  onReset: () => void
-  onQuickPrompt: (prompt: string) => void
-  endRef: React.RefObject<HTMLDivElement | null>
+  selectedDate: Date | null
+  onSelectDate: (date: Date) => void
 }) {
+  const t = useDashboardTheme()
+
   return (
-    <section className="relative flex min-h-0 flex-col border-b border-[var(--pm-border)] bg-[var(--pm-panel)] px-5 py-6 backdrop-blur-sm lg:border-b-0 lg:border-r">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex h-14 w-36 items-start justify-start sm:w-40 lg:w-36 xl:w-40">
-          <Image src="/ibm-logo-light.svg" alt="IBM" width={180} height={70} className="h-auto w-full object-contain dark:hidden" priority />
-          <Image src="/ibm-logo-dark.svg" alt="IBM" width={180} height={70} className="hidden h-auto w-full object-contain dark:block" priority />
-        </div>
-        {messages.length > 0 && (
-          <button
-            type="button"
-            onClick={onReset}
-            className="rounded-full bg-[var(--pm-chip)] px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-[var(--pm-muted)] transition hover:bg-[var(--pm-chip-hover)] hover:text-[var(--pm-text)]"
-          >
-            Reset
-          </button>
-        )}
-      </div>
+    <MiniCalendar
+      selectedDate={selectedDate}
+      onSelectDate={onSelectDate}
+      className={`min-h-[300px] rounded-[26px] ${t.card}`}
+    />
+  )
+}
 
-      <div className="mt-7 flex items-center gap-3 border-b border-[var(--pm-border)] pb-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--pm-chip)] text-[var(--pm-accent)]">
-          <Bot className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--pm-subtle)]">Command Center</div>
-          <h2 className="mt-1 text-xl font-light tracking-tight text-[var(--pm-text)]">Ask Aristotle</h2>
-        </div>
-      </div>
+function UpcomingInterviewsCard({ selectedDate }: { selectedDate: Date | null }) {
+  const t = useDashboardTheme()
 
-      <div className="flex-1 overflow-y-auto py-5 pr-1">
-        {messages.length === 0 ? (
-          <div className="flex h-full min-h-[420px] flex-col justify-center gap-6">
-            <div>
-              <div className="h-px w-16 bg-[var(--pm-accent)]/70 shadow-[0_0_18px_var(--pm-accent-glow)]" />
-              <p className="mt-5 text-2xl font-light leading-tight tracking-tight text-[var(--pm-text-soft)]">
-                Turn command-center questions into interactive hiring artifacts.
-              </p>
-              <p className="mt-4 text-sm leading-6 text-[var(--pm-muted)]">
-                Aristotle replies in the conversation and builds a visual artifact on the canvas.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {QUICK_PROMPTS.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  onClick={() => onQuickPrompt(prompt)}
-                  className="rounded-full bg-[var(--pm-chip)] px-3 py-1.5 text-left text-[11px] text-[var(--pm-muted)] transition hover:bg-[var(--pm-chip-hover)] hover:text-[var(--pm-text)]"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                selected={message.id === activeArtifactId}
-                onSelectArtifact={onSelectArtifact}
+  return <UpcomingInterviews selectedDate={selectedDate} className={`min-h-[300px] rounded-[26px] ${t.card}`} />
+}
+
+function TeamCard() {
+  const t = useDashboardTheme()
+  const team = [
+    { name: "Adi", role: "Founder", seed: "Adi" },
+    { name: "Maya", role: "Product", seed: "Maya" },
+    { name: "Karthik", role: "Engineering", seed: "Karthik" },
+    { name: "Mannan", role: "Ops", seed: "Mannan" },
+    { name: "Priya", role: "Design", seed: "Priya" },
+    { name: "Alex", role: "Candidate", seed: "Alex" },
+  ]
+
+  return (
+    <Card>
+      <Label>Team</Label>
+      <div className="mt-5 flex items-center justify-between gap-4">
+        <div className="flex items-center">
+          {team.map((member) => (
+            <div key={member.name} className="group relative -ml-3 first:ml-0" title={`${member.name} · ${member.role}`}>
+              <img
+                src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(member.seed)}`}
+                alt={member.name}
+                className={`h-10 w-10 rounded-full border-[3px] object-cover shadow-[0_8px_22px_rgba(0,0,0,0.18)] transition group-hover:-translate-y-1 ${t.border} ${t.mutedBox}`}
               />
-            ))}
-            {isThinking && <ThinkingBubble />}
-            <div ref={endRef} />
-          </div>
-        )}
-      </div>
-
-      <form onSubmit={onSubmit} className="mt-auto w-full space-y-3 border-t border-[var(--pm-border)] pt-4">
-        <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em] text-[var(--pm-subtle)]">
-          <span>Ctrl+K focus</span>
-          <span>Ctrl+Enter send</span>
-        </div>
-        <div className="relative group">
-          <input
-            ref={inputRef}
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Ask Aristotle to map hiring, market, proof, or strategy..."
-            className="w-full rounded-2xl bg-[var(--pm-input)] px-5 py-4 pr-14 text-base font-light text-[var(--pm-text)] shadow-xl outline-none transition-all placeholder:text-[var(--pm-placeholder)] focus:ring-1 focus:ring-[var(--pm-focus)]"
-            aria-label="Command Center prompt"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Button
-              type="submit"
-              size="icon"
-              disabled={!input.trim() || isThinking}
-              className={cn(
-                "h-10 w-10 rounded-lg transition-all duration-200",
-                input.trim() && !isThinking
-                  ? "bg-[var(--pm-accent)] text-white shadow-[0_0_28px_var(--pm-accent-glow)] hover:bg-[var(--pm-accent-hover)]"
-                  : "bg-[var(--pm-chip)] text-[var(--pm-placeholder)] hover:bg-[var(--pm-chip-hover)]"
-              )}
-              aria-label="Send prompt"
-            >
-              <ArrowUp className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </form>
-    </section>
-  )
-}
-
-function MessageBubble({ message, selected, onSelectArtifact }: { message: PMConversationMessage; selected: boolean; onSelectArtifact: (id: string) => void }) {
-  const isUser = message.role === "user"
-  const time = new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}
-    >
-      {!isUser && (
-        <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--pm-chip)] text-[var(--pm-accent)]">
-          <Bot className="h-4 w-4" />
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={() => message.artifact && onSelectArtifact(message.id)}
-        disabled={!message.artifact}
-        className={cn(
-          "max-w-[86%] rounded-2xl border px-4 py-3 text-left text-sm leading-6 transition",
-          isUser
-            ? "rounded-tr-sm border-[var(--pm-border)] bg-[var(--pm-text)] text-[var(--pm-bg)] dark:bg-white dark:text-black"
-            : "rounded-tl-sm border-[var(--pm-border)] bg-[var(--pm-card)] text-[var(--pm-text-soft)]",
-          message.artifact && "hover:border-[var(--pm-focus)] hover:bg-[var(--pm-chip-hover)]",
-          selected && "border-[var(--pm-accent)] shadow-[0_0_24px_var(--pm-accent-glow)]"
-        )}
-      >
-        <div className="whitespace-pre-wrap font-sans">{message.content}</div>
-        <div className={cn("mt-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em]", isUser ? "opacity-60" : "text-[var(--pm-subtle)]")}>
-          <Clock3 className="h-3 w-3" />
-          {time}
-          {message.artifact && <span>Artifact</span>}
-        </div>
-      </button>
-    </motion.div>
-  )
-}
-
-function ThinkingBubble() {
-  return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
-      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--pm-chip)] text-[var(--pm-accent)]">
-        <Sparkles className="h-4 w-4" />
-      </div>
-      <div className="rounded-2xl rounded-tl-sm border border-[var(--pm-border)] bg-[var(--pm-card)] px-4 py-3">
-        <AristotleWord small />
-      </div>
-    </motion.div>
-  )
-}
-
-function StatusPill({ provider }: { provider: { name: string; fallback?: boolean; state: "idle" | "thinking" | "ready" | "error" } }) {
-  const color = provider.state === "error" ? "bg-red-500" : provider.state === "thinking" || provider.fallback ? "bg-amber-500" : "bg-emerald-500"
-  const label = provider.state === "idle" ? "Aristotle ready" : provider.name
-
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-[var(--pm-border)] bg-[var(--pm-chip)] px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] text-[var(--pm-muted)]">
-      <span className={cn("h-2 w-2 rounded-full shadow-[0_0_10px_currentColor]", color)} />
-      <span>{label}</span>
-    </div>
-  )
-}
-
-function ThinkingCard({ providerName }: { providerName: string }) {
-  return (
-    <div className="rounded-[2rem] border border-[var(--pm-border)] bg-[var(--pm-card)] px-8 py-7 text-center shadow-2xl shadow-[#241f18]/10 dark:shadow-black/60">
-      <div className="mb-4 text-[10px] uppercase tracking-[0.35em] text-[var(--pm-subtle)]">Thinking</div>
-      <AristotleWord />
-      <div className="mx-auto mt-5 h-px w-40 bg-[var(--pm-accent)]/70 shadow-[0_0_20px_var(--pm-accent-glow)]" />
-      <div className="mt-4 text-xs uppercase tracking-[0.18em] text-[var(--pm-muted)]">{providerName}</div>
-    </div>
-  )
-}
-
-function AristotleWord({ small = false }: { small?: boolean }) {
-  return (
-    <motion.div className={cn("flex justify-center gap-[0.08em] font-light tracking-[0.22em] text-[var(--pm-text-soft)]", small ? "text-sm" : "text-4xl lg:text-5xl")} aria-label={ARISTOTLE}>
-      {ARISTOTLE.split("").map((letter, index) => (
-        <motion.span
-          key={`${letter}-${index}`}
-          initial={{ opacity: 0, y: 10, filter: "blur(7px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ delay: index * 0.11, duration: 0.82, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {letter}
-        </motion.span>
-      ))}
-    </motion.div>
-  )
-}
-
-function ActiveFocus({ servedArtifacts }: { servedArtifacts: number }) {
-  return (
-    <div className="space-y-4">
-      <SectionLabel>Active Focus</SectionLabel>
-      <div className="rounded-[1.5rem] border border-[var(--pm-border)] bg-[var(--pm-chip)] p-5">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--pm-accent)]/10 text-[var(--pm-accent)]">
-            <Search className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-base font-medium text-[var(--pm-text)]">Live hiring brief</div>
-            <div className="mt-1 text-xs text-[var(--pm-muted)]">Evidence, market, and outreach synthesis</div>
-          </div>
-        </div>
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          {[
-            ["Artifacts", servedArtifacts.toString()],
-            ["Signals", "Live"],
-            ["Risk", "Med"],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-2xl border border-[var(--pm-border)] bg-[var(--pm-card)] p-3">
-              <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--pm-subtle)]">{label}</div>
-              <div className="mt-2 text-lg font-light text-[var(--pm-text)]">{value}</div>
             </div>
           ))}
+          <div className={`-ml-2 grid h-10 w-10 place-items-center rounded-full border-2 border-dashed text-lg font-light ${t.border} ${t.row} ${t.faint}`}>
+            +
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className={`text-[40px] font-black leading-none tracking-[-0.08em] ${t.text}`}>6</p>
+          <p className={`mt-1 text-[11px] font-black uppercase tracking-[0.24em] ${t.faint}`}>Members</p>
         </div>
       </div>
+      <p className={`mt-5 text-[12px] font-bold leading-5 ${t.faint}`}>
+        Current team capacity: 2 engineering, 1 product, 1 design, 2 ops/advisory.
+      </p>
+    </Card>
+  )
+}
+
+function HiringBudgetCard() {
+  const t = useDashboardTheme()
+  const total = 24000
+  const spent = 7600
+  const remaining = total - spent
+  const percentSpent = Math.round((spent / total) * 100)
+
+  return (
+    <Card>
+      <Label>Hiring Budget</Label>
+      <div className="mt-4 flex items-end justify-between">
+        <div>
+          <p className={`text-[38px] font-black leading-none tracking-[-0.08em] ${t.text}`}>${remaining.toLocaleString()}</p>
+          <p className="mt-1 text-[11px] font-black uppercase tracking-[0.22em] text-[#18A86B]">Remaining</p>
+        </div>
+        <div className="text-right">
+          <p className={`text-[15px] font-black tracking-[-0.05em] ${t.muted}`}>${spent.toLocaleString()} spent</p>
+          <p className={`mt-1 text-[10px] font-bold ${t.faint}`}>of ${total.toLocaleString()} budget</p>
+        </div>
+      </div>
+      <div className={`mt-4 h-2.5 overflow-hidden rounded-full ${t.mutedBox}`}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${percentSpent}%` }}
+          transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+          className="h-full rounded-full bg-[#FF6A00]"
+        />
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <BudgetMini label="Avg screen" value="$280" tone="blue" />
+        <BudgetMini label="Projected hire" value="$9.8k" tone="purple" />
+        <BudgetMini label="Runway" value="6 wks" tone="green" />
+      </div>
+    </Card>
+  )
+}
+
+function BudgetMini({ label, value, tone }: { label: string; value: string; tone: "blue" | "purple" | "green" }) {
+  const t = useDashboardTheme()
+  const cls = {
+    blue: "text-[#4077EE]",
+    purple: "text-[#8B5CF6]",
+    green: "text-[#18A86B]",
+  }[tone]
+
+  return (
+    <div className={`min-w-0 rounded-[16px] px-3 py-3 ${t.mutedBox}`}>
+      <p className={`truncate text-[15px] font-black tracking-[-0.06em] ${cls}`}>{value}</p>
+      <p className={`mt-1 truncate text-[8px] font-black uppercase tracking-[0.14em] ${t.faint}`}>{label}</p>
     </div>
   )
 }
 
-function KnowledgeGraph() {
+function SpendBreakdownCard() {
+  const t = useDashboardTheme()
+  const items = [
+    { label: "Sourcing", value: 3200, color: "#FF6A00" },
+    { label: "Screening", value: 1800, color: "#4077EE" },
+    { label: "Interviews", value: 2100, color: "#18A86B" },
+    { label: "Tools", value: 500, color: "#8B5CF6" },
+  ]
+  const max = Math.max(...items.map((i) => i.value))
+
   return (
-    <div className="space-y-4">
-      <SectionLabel>Knowledge Graph</SectionLabel>
-      <Link href="/pm/brain" className="group block rounded-[1.5rem] border border-[var(--pm-border)] bg-[var(--pm-chip)] p-5 transition hover:border-emerald-500/40 hover:bg-emerald-500/5">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <Network className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-base font-medium text-[var(--pm-text)] group-hover:text-emerald-700 dark:group-hover:text-emerald-300">Main Knowledge</div>
-            <div className="mt-1 flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Live sync
+    <Card>
+      <Label>Spend Breakdown</Label>
+      <div className="mt-5 space-y-3">
+        {items.map((item) => (
+          <div key={item.label}>
+            <div className="mb-1 flex items-center justify-between">
+              <p className={`text-[11px] font-black uppercase tracking-[0.16em] ${t.muted}`}>{item.label}</p>
+              <p className={`text-[12px] font-black ${t.text}`}>${item.value.toLocaleString()}</p>
             </div>
-          </div>
-        </div>
-      </Link>
-      <div className="rounded-[1.5rem] border border-[var(--pm-border)] bg-[var(--pm-card)] p-5">
-        <div className="mb-4 text-[10px] uppercase tracking-[0.2em] text-[var(--pm-subtle)]">Graph health</div>
-        {[
-          ["Candidate memory", "94%"],
-          ["Role evidence", "81%"],
-          ["Market drift", "27%"],
-        ].map(([label, value]) => (
-          <div key={label} className="mb-3 last:mb-0">
-            <div className="mb-1 flex justify-between text-xs text-[var(--pm-muted)]"><span>{label}</span><span>{value}</span></div>
-            <div className="h-1.5 rounded-full bg-[var(--pm-chip)]"><div className="h-full rounded-full bg-[var(--pm-accent)]" style={{ width: value }} /></div>
+            <div className={`h-2 overflow-hidden rounded-full ${t.mutedBox}`}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${(item.value / max) * 100}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="h-full rounded-full"
+                style={{ backgroundColor: item.color }}
+              />
+            </div>
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   )
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--pm-subtle)]">{children}</div>
+function HiringActionsCard() {
+  const t = useDashboardTheme()
+  const actions = [
+    { label: "Review 3 selected candidates", meta: "Before today 5 PM", status: "Now" },
+    { label: "Generate Alex interview pack", meta: "Technical screen ready", status: "Next" },
+    { label: "Send Priya scheduling email", meta: "Waiting on recruiter", status: "Next" },
+    { label: "Approve $2.4k sourcing spend", meta: "Budget checkpoint", status: "Then" },
+  ]
+
+  return (
+    <Card>
+      <Label>Hiring Actions</Label>
+      <div className="mt-4 space-y-2">
+        {actions.map((action) => (
+          <div key={action.label} className="grid grid-cols-[46px_1fr] gap-3">
+            <p className={`pt-2.5 text-[10px] font-black uppercase tracking-[0.22em] ${t.faint}`}>{action.status}</p>
+            <div className={`rounded-[16px] px-3 py-2.5 ${t.mutedBox}`}>
+              <p className={`text-[12px] font-black tracking-[-0.04em] ${t.text}`}>{action.label}</p>
+              <p className={`mt-1 text-[10px] font-bold tracking-[-0.03em] ${t.faint}`}>{action.meta}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+function PipelineCard() {
+  const t = useDashboardTheme()
+  const stages = [
+    { label: "Shortlisted", value: 12 },
+    { label: "Selected", value: 5 },
+    { label: "Scheduled", value: 3 },
+    { label: "Offer-ready", value: 1 },
+  ]
+
+  return (
+    <Card>
+      <Label>Pipeline</Label>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {stages.map((stage) => (
+          <div key={stage.label} className={`rounded-[16px] p-4 ${t.mutedBox}`}>
+            <p className={`text-[28px] font-black leading-none tracking-[-0.08em] ${t.text}`}>{stage.value}</p>
+            <p className={`mt-2 text-[9px] font-black uppercase tracking-[0.18em] ${t.faint}`}>{stage.label}</p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+function AristotleInsightCard() {
+  const t = useDashboardTheme()
+
+  return (
+    <Card>
+      <div className="flex items-start gap-5">
+        <div className="shrink-0 scale-[0.55] origin-top-left">
+          <BrandOrbLoader />
+        </div>
+        <div>
+          <Label>Aristotle</Label>
+          <p className={`mt-4 text-[15px] font-bold leading-6 tracking-[-0.04em] ${t.text}`}>
+            Your fastest hiring win is to finish interview packets before adding more candidates.
+          </p>
+          <p className={`mt-3 text-[12px] font-bold leading-5 tracking-[-0.03em] ${t.faint}`}>
+            Current pipeline has enough shortlisted talent for two screens. Spend time on decision quality, not more sourcing.
+          </p>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function Card({ children }: { children: React.ReactNode }) {
+  const t = useDashboardTheme()
+  return <section className={`h-full rounded-[26px] border p-5 ${t.card}`}>{children}</section>
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  const t = useDashboardTheme()
+  return <p className={`text-[11px] font-black uppercase tracking-[0.28em] ${t.muted}`}>{children}</p>
 }

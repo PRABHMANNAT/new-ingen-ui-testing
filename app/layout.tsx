@@ -3,6 +3,8 @@ import type { Metadata } from "next"
 import { Comfortaa, Inter, Outfit, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AristotleProvider } from "@/app/pm/aristotle-context"
+import GlobalWorkspaceShell from "@/components/global-workspace-shell"
 import "./globals.css"
 
 const comfortaa = Comfortaa({
@@ -41,11 +43,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className={`${comfortaa.variable} ${inter.variable} ${outfit.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <ThemeProvider>
-          {children}
-          <Analytics />
+          <AristotleProvider>
+            <GlobalWorkspaceShell>
+              {children}
+            </GlobalWorkspaceShell>
+            <Analytics />
+          </AristotleProvider>
         </ThemeProvider>
       </body>
     </html>

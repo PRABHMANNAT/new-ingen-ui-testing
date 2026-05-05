@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useRef, useState } from "react"
+import React, { useMemo, useRef } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import {
   Bar,
@@ -18,12 +18,9 @@ import {
 import {
   Copy,
   Download,
-  Expand,
-  FileJson,
   Grid3X3,
   Info,
   Maximize2,
-  Network,
   Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -43,6 +40,7 @@ type InfographicArtifactProps = {
   onVersionSelect?: (id: string) => void
   onDrill?: (blockId: string) => void
   className?: string
+  children?: React.ReactNode
 }
 
 const CHART_COLORS = ["#df5f12", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ef4444"]
@@ -50,15 +48,6 @@ const ARISTOTLE = "Aristotle"
 
 async function copyText(text: string) {
   await navigator.clipboard?.writeText(text)
-}
-
-function downloadText(filename: string, text: string, type = "application/json") {
-  const url = URL.createObjectURL(new Blob([text], { type }))
-  const a = document.createElement("a")
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
 }
 
 async function elementToPngBlob(element: HTMLElement) {
@@ -154,7 +143,7 @@ function EmptyArtifact() {
         className="h-px w-40 origin-left bg-[var(--pm-accent)]/70 shadow-[0_0_20px_var(--pm-accent-glow)]"
       />
       <p className="max-w-sm text-sm leading-6 text-[var(--pm-muted)]">
-        Ask a Command Center question and Aristotle will build an interactive infographic artifact here.
+        Ask a Dashboard question and Aristotle will build an interactive infographic artifact here.
       </p>
     </div>
   )
@@ -376,42 +365,33 @@ function RenderBlock({ block, onDrill }: { block: ArtifactBlock; onDrill?: (id: 
   )
 }
 
-export function InfographicArtifact({ envelope, versions = [], activeVersionId, onVersionSelect, onDrill, className }: InfographicArtifactProps) {
-  const rootRef = useRef<HTMLDivElement>(null)
-  const [fullscreen, setFullscreen] = useState(false)
-
+export function InfographicArtifact({ envelope, onDrill, className, children }: InfographicArtifactProps) {
   if (!envelope) {
-    return <div className={cn("h-full", className)}><EmptyArtifact /></div>
-  }
-
-  const json = JSON.stringify(envelope, null, 2)
-
-  return (
-    <div className={cn("flex h-full flex-col", fullscreen && "fixed inset-4 z-[120] rounded-[2rem] border border-[var(--pm-border)] bg-[var(--pm-bg)] shadow-2xl", className)} ref={rootRef}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--pm-border)] bg-[var(--pm-panel)] px-5 py-4 backdrop-blur-xl">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-[var(--pm-subtle)]"><Network className="h-3.5 w-3.5" /> Infographic Artifact</div>
-          <h2 className="mt-1 truncate text-xl font-light tracking-tight text-[var(--pm-text)]">{envelope.artifact.title}</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          {versions.length > 0 && (
-            <select value={activeVersionId || ""} onChange={(e) => onVersionSelect?.(e.target.value)} className="h-9 rounded-full border border-[var(--pm-border)] bg-[var(--pm-chip)] px-3 text-xs text-[var(--pm-text)] outline-none">
-              {versions.map((version, i) => <option key={version.id} value={version.id}>v{versions.length - i} - {version.title}</option>)}
-            </select>
+    return (
+      <div className={cn("h-full", className)}>
+        <div className="h-full overflow-y-auto p-5 lg:p-7">
+          <div className="mb-5 min-h-[360px]">
+            <EmptyArtifact />
+          </div>
+          {children && (
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 2xl:grid-cols-3">
+              {children}
+            </div>
           )}
-          <button onClick={() => copyText(json)} className="artifact-toolbar-btn"><Copy className="h-4 w-4" /> Copy</button>
-          <button onClick={() => downloadElementPng(rootRef.current, "aristotle-artifact.png")} className="artifact-toolbar-btn"><Download className="h-4 w-4" /> PNG</button>
-          <button onClick={() => downloadText("aristotle-artifact.json", json)} className="artifact-toolbar-btn"><FileJson className="h-4 w-4" /> JSON</button>
-          <button onClick={() => setFullscreen((value) => !value)} className="artifact-toolbar-btn"><Expand className="h-4 w-4" /> {fullscreen ? "Close" : "Full"}</button>
         </div>
       </div>
+    )
+  }
 
+  return (
+    <div className={cn("flex h-full flex-col", className)}>
       <div className="flex-1 overflow-y-auto p-5 lg:p-7">
         <motion.div initial="hidden" animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }} className="grid grid-cols-1 gap-5 xl:grid-cols-2 2xl:grid-cols-3">
           <AnimatePresence>
-            {envelope.artifact.blocks.map((block) => (
-              <RenderBlock key={block.id || block.kind} block={block} onDrill={onDrill} />
+            {envelope.artifact.blocks.map((block, index) => (
+              <RenderBlock key={`${block.id || block.kind}-${index}`} block={block} onDrill={onDrill} />
             ))}
+            {children}
           </AnimatePresence>
         </motion.div>
       </div>

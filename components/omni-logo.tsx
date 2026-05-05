@@ -51,14 +51,13 @@ export function OmniLogo({ className, size = 40 }: OmniLogoProps) {
                 {dots.map((_, i) => {
                     const angle = (i * 360) / 12
                     const radian = (angle * Math.PI) / 180
-                    // Round to 2 decimal places to prevent hydration mismatch
                     const x = Math.round(Math.cos(radian) * radius * 100) / 100
                     const y = Math.round(Math.sin(radian) * radius * 100) / 100
 
                     return (
                         <div
                             key={i}
-                            className="absolute bg-white"
+                            className="absolute bg-current"
                             style={{
                                 width: `${dotSize}px`,
                                 height: `${dotSize}px`,
@@ -73,13 +72,13 @@ export function OmniLogo({ className, size = 40 }: OmniLogoProps) {
             </div>
 
             {/* Inner Eyes */}
-            <div className="flex gap-[6px] omni-eyes omni-blink z-10">
+            <div className="flex omni-eyes omni-blink z-10" style={{ gap: `${dotSize * 0.46}px` }}>
                 <div
-                    className="bg-white"
+                    className="bg-current"
                     style={{ width: `${dotSize * 1.2}px`, height: `${dotSize * 2.5}px`, borderRadius: "4px" }}
                 />
                 <div
-                    className="bg-white"
+                    className="bg-current"
                     style={{ width: `${dotSize * 1.2}px`, height: `${dotSize * 2.5}px`, borderRadius: "4px" }}
                 />
             </div>

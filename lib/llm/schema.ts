@@ -114,7 +114,7 @@ export function safeParseEnvelope(raw: string): ArtifactEnvelope | null {
 }
 
 export function createFallbackEnvelope(prompt: string): ArtifactEnvelope {
-  const topic = prompt.trim().slice(0, 54) || "Command Center request"
+  const topic = prompt.trim().slice(0, 54) || "Dashboard request"
   return normalizeEnvelope({
     narration: `I mapped "${topic}" into an operational view. The artifact highlights the fastest decisions, likely constraints, and next actions so you can continue from any block.`,
     artifact: {

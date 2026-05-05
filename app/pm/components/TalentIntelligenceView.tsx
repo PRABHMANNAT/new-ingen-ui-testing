@@ -152,8 +152,7 @@ export default function TalentIntelligenceView() {
                     </Button>
                 </div>
             </div>
+
         </div>
     )
 }
-
-

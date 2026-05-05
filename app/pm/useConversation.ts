@@ -148,7 +148,7 @@ export function useConversation() {
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         setProvider({ name: "Aristotle", state: "error" })
-        setMessages((prev) => [...prev, { id: uid("assistant"), role: "assistant", content: "I could not reach the Command Center model layer. Check the server environment keys and try again.", createdAt: new Date().toISOString() }])
+        setMessages((prev) => [...prev, { id: uid("assistant"), role: "assistant", content: "I could not reach the Dashboard model layer. Check the server environment keys and try again.", createdAt: new Date().toISOString() }])
       }
     } finally {
       setIsThinking(false)
