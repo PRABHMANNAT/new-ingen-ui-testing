@@ -106,15 +106,27 @@ on `/student`; recruiters → land on `/` (home).
   metadata extraction, ownership mismatch → `partial`, rollup refresh, then cleanup.
 - No new credentials required (`GITHUB_TOKEN` remains optional; OpenAI key already exists).
 
-### ⬜ Phase 4 — LinkedIn connect block (NEXT)
-Static block atop the profile. OAuth fills identity (name/email/avatar). Needs a LinkedIn
-Developer app wired into Supabase Auth providers (button already exists on login page).
+### ✅ Phase 4 — LinkedIn connect block
+- Profile-level **Connect LinkedIn** uses Supabase `linkIdentity` with
+  `linkedin_oidc`, so existing email/password accounts keep the same user ID.
+- The OAuth callback syncs identity-only fields into `profiles`: name, email,
+  and avatar. Work history is never imported or implied.
+- Connected state, identity preview, and manual refresh are rendered above the
+  fixed profile header.
+- External prerequisite remains: enable LinkedIn OIDC and manual identity
+  linking in Supabase, then configure the LinkedIn Developer app callbacks.
 
-### ⬜ Phase 5 — Multi-format resume export
-One data model → templates: US (1-page, no photo), Indian (photo, detailed), Japanese
-Rirekisho (formal), Australian (detailed + referees), Skills-based. Server-side HTML→PDF.
+### ✅ Phase 5 — Multi-format resume export
+- Protected `GET /api/student/resume?format=...` route generates real PDFs with
+  `pdf-lib` from the signed-in student's current profile and proof statuses.
+- Formats: US one-page/no photo, Indian detailed/photo, Japanese Rirekisho,
+  Australian detailed/referees, and Skills-based/proof-first.
+- Cookie auth supports browser downloads; bearer auth supports API/mobile clients.
+- Export controls and format descriptions are integrated above the profile.
+- Verified all five endpoints return HTTP 200, `application/pdf`, and valid
+  `%PDF-` files. US, Indian, and Japanese samples were rendered and visually checked.
 
-### ⬜ Phase 6 — Recruiter home wiring + polish
+### ⬜ Phase 6 — Recruiter home wiring + polish (NEXT)
 Recruiter side (`/`, currently redirects to `/pm`), empty states, error handling.
 
 ## Key gotchas

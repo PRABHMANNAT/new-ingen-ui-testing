@@ -41,11 +41,23 @@ Creates three logins (password `Password123!` for all):
 Logging in as different users shows different profiles. Student → `/student`,
 recruiter → `/` (home).
 
-## 5. (Later) LinkedIn OAuth
-Supabase → **Authentication → Providers → LinkedIn (OIDC)**. You'll need a
-LinkedIn Developer app with the "Sign In with LinkedIn using OpenID Connect"
-product, and the callback URL Supabase gives you. Note: LinkedIn OAuth only
-returns name/email/photo — work history comes from the resume/chat pipeline.
+## 5. LinkedIn OAuth
+1. Create a LinkedIn Developer app and add the **Sign In with LinkedIn using
+   OpenID Connect** product.
+2. Supabase -> **Authentication -> Providers -> LinkedIn (OIDC)**: enable the
+   provider and enter the LinkedIn client ID and secret.
+3. Add the Supabase provider callback URL shown in the dashboard to the LinkedIn
+   app's authorized redirect URLs.
+4. In Supabase Auth settings, enable manual identity linking so an existing
+   email/password student can use `linkIdentity`.
+5. Add the app callback URLs to Supabase's redirect allow list:
+   - `http://localhost:5176/auth/callback`
+   - `http://localhost:5178/auth/callback` when using the alternate local port
+   - the production `/auth/callback` URL
+
+The profile page's **Connect LinkedIn** button only imports identity fields:
+name, email, and profile photo. Work history is intentionally not requested;
+rich profile data continues to come from Aristotle, resumes, and proof links.
 
 ## 6. Disable email confirmation for faster local testing (optional)
 Supabase → **Authentication → Sign In / Providers → Email** → turn off

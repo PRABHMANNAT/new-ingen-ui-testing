@@ -8,12 +8,14 @@ import {
   Briefcase,
   Check,
   Code2,
+  Download,
   FileText,
   GraduationCap,
   HeartHandshake,
   ImagePlus,
   LayoutGrid,
   Link2,
+  Linkedin,
   Loader2,
   LogOut,
   Paperclip,
@@ -26,6 +28,8 @@ import {
   X,
 } from "lucide-react"
 import type { ChatMessageRow, FullProfile, ProofRow, SectionWithItems } from "@/lib/supabase/types"
+import type { LinkedInIdentity } from "@/lib/profile/linkedin"
+import { RESUME_DEFINITIONS } from "@/lib/resume/types"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import {
@@ -36,6 +40,7 @@ import {
   deleteProof,
   deleteSection,
   signOutAction,
+  syncLinkedInIdentityAction,
   updateHeader,
   updateItem,
   verifyAllProofs,
@@ -86,9 +91,11 @@ function initials(name: string) {
 export default function ProfileWorkspace({
   profile,
   initialChat,
+  linkedInIdentity,
 }: {
   profile: FullProfile
   initialChat: ChatMessageRow[]
+  linkedInIdentity: LinkedInIdentity
 }) {
   return (
     <main className="flex h-full min-w-0 flex-1 overflow-hidden bg-[#F5F1EA] text-[#251F1A] dark:bg-[#050505] dark:text-white">
@@ -100,6 +107,10 @@ export default function ProfileWorkspace({
         <div className="relative h-full overflow-y-auto px-8 py-8">
           <div className="mx-auto w-full max-w-[920px] pb-16">
             <Toolbar profile={profile} />
+            <div className="mt-5 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+              <LinkedInCard identity={linkedInIdentity} />
+              <ResumeExportCard />
+            </div>
             <HeaderBlock profile={profile} />
 
             <div className="mt-6 flex flex-col gap-5">
@@ -113,6 +124,145 @@ export default function ProfileWorkspace({
         </div>
       </section>
     </main>
+  )
+}
+
+function LinkedInCard({ identity }: { identity: LinkedInIdentity }) {
+  const router = useRouter()
+  const [pending, start] = useTransition()
+  const [error, setError] = useState("")
+
+  function connect() {
+    start(async () => {
+      setError("")
+      const supabase = createClient()
+      const redirectTo = `${window.location.origin}/auth/callback?mode=linkedin-connect&next=${encodeURIComponent("/student/notes")}`
+      const { error: oauthError } = await supabase.auth.linkIdentity({
+        provider: "linkedin_oidc",
+        options: { redirectTo },
+      })
+      if (oauthError) setError(oauthError.message)
+    })
+  }
+
+  function refreshIdentity() {
+    start(async () => {
+      setError("")
+      const result = await syncLinkedInIdentityAction()
+      if (!result.ok) setError(result.error ?? "Could not refresh LinkedIn identity")
+      router.refresh()
+    })
+  }
+
+  return (
+    <section className="rounded-[24px] border border-[#0A66C2]/20 bg-[#FFFDF8]/92 p-4 shadow-[0_14px_38px_rgba(42,37,32,0.06)] dark:border-[#0A66C2]/25 dark:bg-[#101010]/92">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0A66C2] text-white">
+          <Linkedin size={19} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-black text-[#251F1A] dark:text-white">LinkedIn identity</h2>
+              <p className="mt-0.5 text-[11px] font-semibold text-[#756B63] dark:text-white/45">
+                Identity only: name, email, and profile photo.
+              </p>
+            </div>
+            <span
+              className={cn(
+                "rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em]",
+                identity.connected
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300"
+                  : "bg-[#F1ECE5] text-[#756B63] dark:bg-white/[0.06] dark:text-white/45",
+              )}
+            >
+              {identity.connected ? "Connected" : "Not connected"}
+            </span>
+          </div>
+
+          {identity.connected ? (
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E7F1FB] text-xs font-black text-[#0A66C2]">
+                {identity.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={identity.avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  initials(identity.name)
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-black text-[#251F1A] dark:text-white">{identity.name || "LinkedIn member"}</p>
+                <p className="truncate text-[10px] font-semibold text-[#756B63] dark:text-white/45">{identity.email}</p>
+              </div>
+              <button
+                type="button"
+                onClick={refreshIdentity}
+                disabled={pending}
+                className="inline-flex items-center gap-1 rounded-full border border-[#0A66C2]/25 px-2.5 py-1.5 text-[10px] font-black text-[#0A66C2] disabled:opacity-50"
+              >
+                {pending ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} Refresh
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={connect}
+              disabled={pending}
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#0A66C2] px-3.5 py-2 text-[11px] font-black text-white transition hover:bg-[#084f96] disabled:opacity-50"
+            >
+              {pending ? <Loader2 size={13} className="animate-spin" /> : <Linkedin size={13} />}
+              Connect LinkedIn
+            </button>
+          )}
+          {error && <p className="mt-2 text-[10px] font-bold text-red-600" role="alert">{error}</p>}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ResumeExportCard() {
+  const [format, setFormat] = useState(RESUME_DEFINITIONS[0].id)
+  const active = RESUME_DEFINITIONS.find((entry) => entry.id === format) ?? RESUME_DEFINITIONS[0]
+
+  return (
+    <section className="rounded-[24px] border border-[#DED4C7]/70 bg-[#FFFDF8]/92 p-4 shadow-[0_14px_38px_rgba(42,37,32,0.06)] dark:border-white/10 dark:bg-[#101010]/92">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-black text-[#251F1A] dark:text-white">Resume export</h2>
+          <p className="mt-0.5 text-[11px] font-semibold text-[#756B63] dark:text-white/45">
+            Generate a PDF from your current profile and proof status.
+          </p>
+        </div>
+        <FileText size={18} className="text-[#7C5CFF]" />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {RESUME_DEFINITIONS.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            onClick={() => setFormat(entry.id)}
+            className={cn(
+              "rounded-full border px-2.5 py-1 text-[10px] font-black transition",
+              format === entry.id
+                ? "border-[#7C5CFF] bg-[#EEE9FF] text-[#6B4EF6] dark:bg-[#7C5CFF]/15 dark:text-[#C9BEFF]"
+                : "border-[#DED4C7] text-[#756B63] dark:border-white/10 dark:text-white/45",
+            )}
+          >
+            {entry.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-[#F5F1EA] px-3 py-2.5 dark:bg-white/[0.04]">
+        <p className="text-[10px] font-semibold leading-4 text-[#756B63] dark:text-white/45">{active.description}</p>
+        <a
+          href={`/api/student/resume?format=${format}`}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#7C5CFF] px-3 py-2 text-[10px] font-black text-white shadow-[0_8px_18px_rgba(124,92,255,0.24)] transition hover:bg-[#684AF0]"
+        >
+          <Download size={12} /> Download PDF
+        </a>
+      </div>
+    </section>
   )
 }
 

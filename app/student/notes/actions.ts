@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentProfile } from "@/lib/profile/queries"
+import { syncLinkedInProfile } from "@/lib/profile/linkedin"
 import { verifyProofWithContext } from "@/lib/verify/proofs"
 import type { ProofKind } from "@/lib/supabase/types"
 
@@ -20,6 +21,14 @@ async function requireUser() {
 }
 
 export type ActionResult = { ok: boolean; error?: string }
+
+export async function syncLinkedInIdentityAction(): Promise<ActionResult> {
+  const { supabase, user } = await requireUser()
+  const identity = await syncLinkedInProfile(supabase, user)
+  if (!identity.connected) return { ok: false, error: "LinkedIn is not connected" }
+  revalidatePath(PATH)
+  return { ok: true }
+}
 
 // --- Header (the fixed top block) -------------------------------------------
 export async function updateHeader(input: {

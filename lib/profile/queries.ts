@@ -1,6 +1,16 @@
 import "server-only"
 import { createClient } from "@/lib/supabase/server"
+import { getLinkedInIdentity, type LinkedInIdentity } from "@/lib/profile/linkedin"
 import type { ChatMessageRow, FullProfile, ProfileRow, SectionWithItems } from "@/lib/supabase/types"
+
+export async function getCurrentLinkedInIdentity(): Promise<LinkedInIdentity> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { connected: false, name: "", email: "", avatarUrl: null, connectedAt: null }
+  return getLinkedInIdentity(user)
+}
 
 // Recent Aristotle chat messages for the signed-in user, oldest first.
 export async function getRecentChat(limit = 30): Promise<ChatMessageRow[]> {
