@@ -3,8 +3,12 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentProfile } from "@/lib/profile/queries"
+import { verifyProofWithContext } from "@/lib/verify/proofs"
+import type { ProofKind } from "@/lib/supabase/types"
 
 const PATH = "/student/notes"
+const PROOF_KINDS: ProofKind[] = ["github", "doi", "image", "link", "file"]
 
 async function requireUser() {
   const supabase = await createClient()
@@ -110,6 +114,94 @@ export async function deleteItem(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: error.message }
   revalidatePath(PATH)
   return { ok: true }
+}
+
+// --- Proofs -----------------------------------------------------------------
+export async function addProof(input: { itemId: string; kind: string; url: string }): Promise<ActionResult> {
+  const { supabase } = await requireUser()
+  const kind = (PROOF_KINDS.includes(input.kind as ProofKind) ? input.kind : "link") as ProofKind
+  const url = input.url.trim()
+  if (!url) return { ok: false, error: "URL is required" }
+  const { error } = await supabase.from("proofs").insert({ item_id: input.itemId, kind, url, status: "unverified" })
+  if (error) return { ok: false, error: error.message }
+  revalidatePath(PATH)
+  return { ok: true }
+}
+
+export async function deleteProof(id: string): Promise<ActionResult> {
+  const { supabase } = await requireUser()
+  const { error } = await supabase.from("proofs").delete().eq("id", id)
+  if (error) return { ok: false, error: error.message }
+  revalidatePath(PATH)
+  return { ok: true }
+}
+
+// Run the verification engine on a single proof and persist the result.
+export async function verifyProofAction(id: string): Promise<ActionResult> {
+  const { supabase } = await requireUser()
+  const profile = await getCurrentProfile()
+  if (!profile) return { ok: false, error: "No profile" }
+  const item = profile.sections.flatMap((section) => section.items).find((entry) => entry.proofs.some((proof) => proof.id === id))
+  const proof = item?.proofs.find((entry) => entry.id === id)
+  if (!proof || !item) return { ok: false, error: "Proof not found" }
+
+  const result = await verifyProofWithContext(proof.kind, proof.url, {
+    profileName: profile.full_name,
+    itemTitle: item.title,
+    itemBody: item.body,
+  })
+  const { error: upErr } = await supabase
+    .from("proofs")
+    .update({ status: result.status, confidence: result.confidence, extracted: result.extracted })
+    .eq("id", id)
+  if (upErr) return { ok: false, error: upErr.message }
+  revalidatePath(PATH)
+  return { ok: true }
+}
+
+// Verify every not-yet-verified proof on the user's profile (capped for safety).
+export async function verifyAllProofs(): Promise<
+  ActionResult & { checked?: number; verified?: number; partial?: number; unverified?: number }
+> {
+  const { supabase } = await requireUser()
+  const profile = await getCurrentProfile()
+  if (!profile) return { ok: false, error: "No profile" }
+
+  const pending = profile.sections
+    .flatMap((section) => section.items.map((item) => ({ item, proofs: item.proofs })))
+    .flatMap(({ item, proofs }) => proofs.map((proof) => ({ item, proof })))
+    .filter(({ proof }) => proof.status !== "verified")
+    .slice(0, 16)
+
+  let verified = 0
+  let partial = 0
+  let unverified = 0
+  for (const { item, proof } of pending) {
+    try {
+      const result = await verifyProofWithContext(proof.kind, proof.url, {
+        profileName: profile.full_name,
+        itemTitle: item.title,
+        itemBody: item.body,
+      })
+      const { error } = await supabase
+        .from("proofs")
+        .update({ status: result.status, confidence: result.confidence, extracted: result.extracted })
+        .eq("id", proof.id)
+      if (error) {
+        unverified += 1
+      } else if (result.status === "verified") {
+        verified += 1
+      } else if (result.status === "partial") {
+        partial += 1
+      } else {
+        unverified += 1
+      }
+    } catch {
+      unverified += 1
+    }
+  }
+  revalidatePath(PATH)
+  return { ok: true, checked: pending.length, verified, partial, unverified }
 }
 
 // --- Session ----------------------------------------------------------------

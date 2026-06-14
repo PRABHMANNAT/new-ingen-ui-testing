@@ -41,17 +41,18 @@ export async function POST(request: NextRequest) {
     const reply = result.error.includes("not configured")
       ? "AI editing isn't configured yet — add an OPENAI_API_KEY to enable Aristotle."
       : `I hit an error talking to the model: ${result.error}`
-    await supabase.from("chat_messages").insert({ profile_id: user.id, role: "assistant", content: reply })
+    await supabase.from("chat_messages").insert({ profile_id: user.id, role: "assistant", content: reply, attachments: [] })
     return NextResponse.json({ reply, applied: 0 }, { status: 200 })
   }
 
   const applied = await applyActions(supabase, user.id, result.plan.actions)
 
   // Persist the conversation turn.
-  await supabase.from("chat_messages").insert([
+  const { error: chatErr } = await supabase.from("chat_messages").insert([
     { profile_id: user.id, role: "user", content: message, attachments },
-    { profile_id: user.id, role: "assistant", content: result.plan.reply },
+    { profile_id: user.id, role: "assistant", content: result.plan.reply, attachments: [] },
   ])
+  if (chatErr) console.error("[aristotle] chat insert failed:", chatErr.message)
 
   return NextResponse.json({ reply: result.plan.reply, applied })
 }

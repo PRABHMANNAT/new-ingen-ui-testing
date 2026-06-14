@@ -13,11 +13,13 @@ import {
   HeartHandshake,
   ImagePlus,
   LayoutGrid,
+  Link2,
   Loader2,
   LogOut,
   Paperclip,
   Pencil,
   Plus,
+  ShieldCheck,
   Sparkles,
   Trash2,
   Trophy,
@@ -28,12 +30,16 @@ import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import {
   addItem,
+  addProof,
   addSection,
   deleteItem,
+  deleteProof,
   deleteSection,
   signOutAction,
   updateHeader,
   updateItem,
+  verifyAllProofs,
+  verifyProofAction,
 } from "./actions"
 
 const QUICK_COMMANDS = [
@@ -112,9 +118,18 @@ export default function ProfileWorkspace({
 
 // --- Toolbar ----------------------------------------------------------------
 function Toolbar({ profile }: { profile: FullProfile }) {
+  const router = useRouter()
   const [pending, start] = useTransition()
+  const [verifying, startVerify] = useTransition()
+  const [verificationNote, setVerificationNote] = useState("")
+
+  const allProofs = profile.sections.flatMap((s) => s.items).flatMap((i) => i.proofs)
+  const verifiedCount = allProofs.filter((p) => p.status === "verified").length
+  const partialCount = allProofs.filter((p) => p.status === "partial").length
+  const pendingCount = allProofs.filter((p) => p.status !== "verified").length
+
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-2 text-xs font-bold text-[#756B63] dark:text-white/50">
         <Check size={14} className="text-emerald-600" />
         Signed in as <span className="text-[#251F1A] dark:text-white">{profile.full_name || profile.email}</span>
@@ -122,15 +137,48 @@ function Toolbar({ profile }: { profile: FullProfile }) {
           {profile.role}
         </span>
       </div>
-      <button
-        type="button"
-        onClick={() => start(() => void signOutAction())}
-        disabled={pending}
-        className="inline-flex items-center gap-1.5 rounded-full border border-[#DED4C7] bg-[#FFFDF8]/80 px-3 py-1.5 text-[11px] font-black text-[#756B63] transition hover:border-red-300 hover:text-red-600 disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/50"
-      >
-        {pending ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
-        Sign out
-      </button>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {allProofs.length > 0 && (
+          <>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFDF8] px-2.5 py-1 text-[11px] font-black text-[#756B63] dark:bg-white/[0.04] dark:text-white/50">
+              <ShieldCheck size={13} className={verifiedCount === allProofs.length ? "text-emerald-600" : "text-[#7C5CFF]"} />
+              {allProofs.length} claimed · {verifiedCount} verified{partialCount > 0 ? ` · ${partialCount} partial` : ""}
+            </span>
+            {pendingCount > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  startVerify(async () => {
+                    setVerificationNote("")
+                    const result = await verifyAllProofs()
+                    setVerificationNote(
+                      result.ok
+                        ? `Checked ${result.checked ?? 0}: ${result.verified ?? 0} verified, ${result.partial ?? 0} partial, ${result.unverified ?? 0} unverified.`
+                        : result.error ?? "Verification failed.",
+                    )
+                    router.refresh()
+                  })
+                }
+                disabled={verifying}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#7C5CFF] px-3 py-1.5 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(124,92,255,0.26)] transition hover:bg-[#684AF0] disabled:opacity-50"
+              >
+                {verifying ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+                Verify all ({pendingCount})
+              </button>
+            )}
+          </>
+        )}
+        {verificationNote && <span className="max-w-72 text-[10px] font-bold text-[#756B63] dark:text-white/45">{verificationNote}</span>}
+        <button
+          type="button"
+          onClick={() => start(() => void signOutAction())}
+          disabled={pending}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#DED4C7] bg-[#FFFDF8]/80 px-3 py-1.5 text-[11px] font-black text-[#756B63] transition hover:border-red-300 hover:text-red-600 disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/50"
+        >
+          {pending ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
+          Sign out
+        </button>
+      </div>
     </div>
   )
 }
@@ -359,13 +407,7 @@ function ItemRow({ item }: { item: SectionWithItems["items"][number] }) {
               ))}
             </div>
           )}
-          {item.proofs.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {item.proofs.map((proof) => (
-                <ProofBadge key={proof.id} proof={proof} />
-              ))}
-            </div>
-          )}
+          <ProofsArea itemId={item.id} proofs={item.proofs} />
         </div>
         <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
           <button type="button" onClick={() => { setForm({ title: item.title, body: item.body }); setEditing(true) }} className="rounded-full p-1.5 text-[#756B63] hover:bg-[#241f18]/5 dark:text-white/40" aria-label="Edit item">
@@ -380,17 +422,166 @@ function ItemRow({ item }: { item: SectionWithItems["items"][number] }) {
   )
 }
 
-function ProofBadge({ proof }: { proof: ProofRow }) {
+const PROOF_KIND_OPTIONS = [
+  { kind: "github", label: "GitHub repo", placeholder: "github.com/user/repo" },
+  { kind: "doi", label: "Research / DOI", placeholder: "https://doi.org/10.… or paper URL" },
+  { kind: "link", label: "Link", placeholder: "https://…" },
+]
+
+function proofSummary(proof: ProofRow): string | null {
+  const e = (proof.extracted ?? {}) as Record<string, unknown>
+  const s = (k: string) => (typeof e[k] === "string" && e[k] ? (e[k] as string) : null)
+  if (proof.kind === "github" && (e.stars !== undefined || e.full_name)) {
+    return [s("full_name"), e.language ? String(e.language) : null, e.stars !== undefined ? `★ ${e.stars}` : null].filter(Boolean).join(" · ")
+  }
+  if (proof.kind === "doi") return s("title")
+  if (proof.kind === "image") return s("document_type") || s("event")
+  return s("title") || s("reason")
+}
+
+function ProofsArea({ itemId, proofs }: { itemId: string; proofs: ProofRow[] }) {
+  const [adding, setAdding] = useState(false)
+  return (
+    <div className="mt-2.5 space-y-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {proofs.map((proof) => (
+          <ProofChip key={proof.id} proof={proof} />
+        ))}
+        <button
+          type="button"
+          onClick={() => setAdding((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#DED4C7] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#B7AEA5] transition hover:border-[#7C5CFF]/45 hover:text-[#6B4EF6] dark:border-white/15"
+        >
+          <Plus size={11} /> Proof
+        </button>
+      </div>
+      {adding && <AddProofForm itemId={itemId} onDone={() => setAdding(false)} />}
+    </div>
+  )
+}
+
+function ProofChip({ proof }: { proof: ProofRow }) {
+  const router = useRouter()
+  const [pending, start] = useTransition()
+  const [error, setError] = useState("")
   const tone =
     proof.status === "verified"
       ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300"
       : proof.status === "partial"
         ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300"
         : "border-[#DED4C7] bg-[#FFFDF8] text-[#756B63] dark:border-white/10 dark:bg-white/[0.04] dark:text-white/50"
+  const summary = proofSummary(proof)
+  const Icon = proof.kind === "github" ? Code2 : proof.kind === "image" ? ImagePlus : proof.kind === "doi" ? FileText : Link2
+
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wide", tone)}>
-      <BadgeCheck size={11} /> {proof.kind} · {proof.status}
+    <span
+      className={cn("group/proof inline-flex max-w-full items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-black", tone)}
+      title={summary ? `${proof.kind}: ${summary}` : proof.url ?? proof.kind}
+    >
+      <Icon size={11} className="shrink-0" />
+      <span className="truncate uppercase tracking-wide">
+        {proof.kind} · {proof.status}
+        {summary ? <span className="ml-1 normal-case opacity-80">· {summary}</span> : null}
+      </span>
+      {proof.status === "verified" ? (
+        <BadgeCheck size={12} className="shrink-0" />
+      ) : (
+        <button
+          type="button"
+          onClick={() =>
+            start(async () => {
+              setError("")
+              const result = await verifyProofAction(proof.id)
+              if (!result.ok) setError(result.error ?? "Verification failed")
+              router.refresh()
+            })
+          }
+          disabled={pending}
+          className="shrink-0 rounded-full px-1 uppercase tracking-wide hover:underline disabled:opacity-50"
+        >
+          {pending ? <Loader2 size={11} className="animate-spin" /> : "Verify"}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() =>
+          start(async () => {
+            setError("")
+            const result = await deleteProof(proof.id)
+            if (!result.ok) setError(result.error ?? "Could not remove proof")
+            router.refresh()
+          })
+        }
+        disabled={pending}
+        className="shrink-0 opacity-0 transition group-hover/proof:opacity-100"
+        aria-label="Remove proof"
+      >
+        <X size={11} />
+      </button>
+      {error && <span className="sr-only" role="alert">{error}</span>}
     </span>
+  )
+}
+
+function AddProofForm({ itemId, onDone }: { itemId: string; onDone: () => void }) {
+  const router = useRouter()
+  const [pending, start] = useTransition()
+  const [kind, setKind] = useState(PROOF_KIND_OPTIONS[0].kind)
+  const [url, setUrl] = useState("")
+  const [error, setError] = useState("")
+  const active = PROOF_KIND_OPTIONS.find((o) => o.kind === kind) ?? PROOF_KIND_OPTIONS[0]
+
+  return (
+    <div className="rounded-xl border border-[#7C5CFF]/30 bg-[#F8F5FF] p-2 dark:border-[#7C5CFF]/20 dark:bg-[#7C5CFF]/[0.06]">
+      <div className="flex flex-wrap gap-1.5">
+        {PROOF_KIND_OPTIONS.map((o) => (
+          <button
+            key={o.kind}
+            type="button"
+            onClick={() => setKind(o.kind)}
+            className={cn(
+              "rounded-full border px-2 py-0.5 text-[10px] font-black transition",
+              kind === o.kind
+                ? "border-[#7C5CFF] bg-[#EEE9FF] text-[#6B4EF6] dark:border-[#7C5CFF]/50 dark:bg-[#7C5CFF]/15 dark:text-[#C9BEFF]"
+                : "border-[#DED4C7] text-[#756B63] dark:border-white/10 dark:text-white/50",
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder={active.placeholder}
+          className="h-8 flex-1 rounded-lg border border-[#DED4C7] bg-white px-3 text-xs font-semibold text-[#251F1A] outline-none focus:border-[#7C5CFF]/50 dark:border-white/10 dark:bg-[#0c0c0c] dark:text-white"
+        />
+        <button
+          type="button"
+          disabled={pending || !url.trim()}
+          onClick={() =>
+            start(async () => {
+              setError("")
+              const result = await addProof({ itemId, kind, url })
+              if (result.ok) {
+                router.refresh()
+                onDone()
+              } else {
+                setError(result.error ?? "Could not add proof")
+              }
+            })
+          }
+          className="inline-flex items-center gap-1 rounded-full bg-[#7C5CFF] px-2.5 py-1.5 text-[10px] font-black text-white disabled:opacity-50"
+        >
+          {pending ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />} Add
+        </button>
+        <button type="button" onClick={onDone} className="rounded-full border border-[#DED4C7] p-1.5 text-[#756B63] dark:border-white/10 dark:text-white/50">
+          <X size={11} />
+        </button>
+      </div>
+      {error && <p className="mt-1 text-[10px] font-bold text-red-600" role="alert">{error}</p>}
+    </div>
   )
 }
 

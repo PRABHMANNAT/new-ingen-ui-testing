@@ -87,18 +87,26 @@ on `/student`; recruiters → land on `/` (home).
   renders `item.meta.images`. `queries.getRecentChat()` loads history.
 - Verified live: "add Skills section (Java/Spring Boot/Docker/K8s) + update headline" worked
   end-to-end; storage upload + vision on a real photo confirmed separately.
-- ⚠️ Proofs are inserted with status **`unverified`** — actual verification is Phase 3.
+- Proofs are inserted as **`unverified`** and can now be checked by the Phase 3 engine.
 
-### ⬜ Phase 3 — Proof engine (NEXT)
-Verify the proofs attached in Phase 2. Reuse existing infra:
-- GitHub repo links → `app/api/github` + `lib/github.ts` (confirm repo/owner, pull stars/lang).
-- Research/DOI/paper links → `app/api/verify-link` + `lib/link-verifier.ts` (reachable + metadata + author cross-check).
-- Hackathon/award/cert images → GPT-vision validates each + extracts event/date/placement.
-- Set `proofs.status` (verified/partial/unverified) + `confidence` + `extracted`; show badges
-  (component already renders them) and rollups like "5 claimed, 4 verified".
-- No new credentials needed.
+### ✅ Phase 3 — Proof engine
+- `lib/verify/proofs.ts`: deterministic GitHub/Crossref/link checks plus OpenAI vision
+  for certificate, award, diploma, hackathon, and official-document images.
+- GitHub repositories extract owner, language, stars, forks, and activity. A repository
+  is `verified` only when the GitHub owner's public name matches the profile; otherwise
+  the existing artifact is `partial`.
+- DOI metadata extracts title, authors, venue, publisher, and date. A DOI is `verified`
+  only when an author matches the profile; resolved metadata without a match is `partial`.
+- Generic reachable links are `partial`, not fully verified. Invalid/private/local URLs
+  are rejected to prevent server-side internal network fetches.
+- `app/student/notes/actions.ts`: add/delete/verify-one/verify-all proof actions under RLS.
+- `profile-workspace.tsx`: manual proof form, per-proof verify/remove controls, status and
+  metadata chips, and rollups such as "5 claimed · 4 verified · 1 partial".
+- Verified live with a temporary `github.com/octocat/Hello-World` proof: normalized URL,
+  metadata extraction, ownership mismatch → `partial`, rollup refresh, then cleanup.
+- No new credentials required (`GITHUB_TOKEN` remains optional; OpenAI key already exists).
 
-### ⬜ Phase 4 — LinkedIn connect block
+### ⬜ Phase 4 — LinkedIn connect block (NEXT)
 Static block atop the profile. OAuth fills identity (name/email/avatar). Needs a LinkedIn
 Developer app wired into Supabase Auth providers (button already exists on login page).
 
