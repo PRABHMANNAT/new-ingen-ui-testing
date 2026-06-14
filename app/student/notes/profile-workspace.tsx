@@ -114,6 +114,15 @@ export default function ProfileWorkspace({
             <HeaderBlock profile={profile} />
 
             <div className="mt-6 flex flex-col gap-5">
+              {profile.sections.length === 0 && (
+                <div className="rounded-[24px] border-2 border-dashed border-[#DED4C7] px-6 py-10 text-center dark:border-white/10">
+                  <LayoutGrid size={22} className="mx-auto text-[#A89D91] dark:text-white/25" />
+                  <h2 className="mt-3 text-sm font-black text-[#251F1A] dark:text-white">Your profile has no sections yet</h2>
+                  <p className="mx-auto mt-1 max-w-md text-xs font-semibold leading-5 text-[#756B63] dark:text-white/45">
+                    Ask Aristotle to build one from your resume, or add a section manually below.
+                  </p>
+                </div>
+              )}
               {profile.sections.map((section) => (
                 <SectionCard key={section.id} section={section} />
               ))}

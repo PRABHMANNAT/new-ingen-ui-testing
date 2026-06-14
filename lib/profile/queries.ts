@@ -19,12 +19,13 @@ export async function getRecentChat(limit = 30): Promise<ChatMessageRow[]> {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return []
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("chat_messages")
     .select("*")
     .eq("profile_id", user.id)
     .order("created_at", { ascending: false })
     .limit(limit)
+  if (error) throw new Error(`Could not load chat history: ${error.message}`)
   return ((data as ChatMessageRow[]) ?? []).slice().reverse()
 }
 
@@ -38,11 +39,13 @@ export async function getCurrentProfile(): Promise<FullProfile | null> {
   } = await supabase.auth.getUser()
   if (!user) return null
 
-  let { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle<ProfileRow>()
+  const profileResult = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle<ProfileRow>()
+  if (profileResult.error) throw new Error(`Could not load profile: ${profileResult.error.message}`)
+  let profile = profileResult.data
 
   if (!profile) {
     const role = (user.user_metadata?.role as string) === "recruiter" ? "recruiter" : "student"
-    const { data: created } = await supabase
+    const { data: created, error } = await supabase
       .from("profiles")
       .insert({
         id: user.id,
@@ -52,16 +55,18 @@ export async function getCurrentProfile(): Promise<FullProfile | null> {
       })
       .select("*")
       .single<ProfileRow>()
+    if (error) throw new Error(`Could not create profile: ${error.message}`)
     profile = created
   }
 
   if (!profile) return null
 
-  const { data: sections } = await supabase
+  const { data: sections, error } = await supabase
     .from("sections")
     .select("*, items(*, proofs(*))")
     .eq("profile_id", user.id)
     .order("position", { ascending: true })
+  if (error) throw new Error(`Could not load profile sections: ${error.message}`)
 
   const hydrated: SectionWithItems[] = (sections ?? []).map((section) => ({
     ...section,

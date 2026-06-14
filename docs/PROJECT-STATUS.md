@@ -126,8 +126,14 @@ on `/student`; recruiters → land on `/` (home).
 - Verified all five endpoints return HTTP 200, `application/pdf`, and valid
   `%PDF-` files. US, Indian, and Japanese samples were rendered and visually checked.
 
-### ⬜ Phase 6 — Recruiter home wiring + polish (NEXT)
-Recruiter side (`/`, currently redirects to `/pm`), empty states, error handling.
+### ✅ Phase 6 — Recruiter home wiring + polish
+- `/` is now the authenticated recruiter home and redirects student accounts back to
+  `/student`. `/recruiter/candidates/[id]` is a recruiter-only, read-only candidate view.
+- Recruiters can search students by name, role, headline, or skill and filter by proof
+  readiness. Candidate rows show profile completeness and verified/partial proof rollups.
+- The existing `/pm` demo remains available as **Command Center** in recruiter navigation.
+- Added recruiter sign-out, loading, no-results, no-candidates, no-sections, not-found,
+  unconfigured-Supabase, and recoverable application error states.
 
 ## Key gotchas
 - `proxy.ts` (not `middleware.ts`) in Next 16; export fn named `proxy`.

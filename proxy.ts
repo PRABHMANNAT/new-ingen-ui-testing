@@ -34,12 +34,25 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
   const role = (user?.user_metadata?.role ?? user?.app_metadata?.role) as string | undefined
   const isStudentArea = path.startsWith("/student") && path !== LOGIN_PATH
+  const isRecruiterArea = path === "/" || path.startsWith("/recruiter")
 
-  // Gate the student workspace behind auth.
-  if (isStudentArea && !user) {
+  // Gate role-specific workspaces behind auth.
+  if ((isStudentArea || isRecruiterArea) && !user) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = LOGIN_PATH
     redirectUrl.searchParams.set("next", path)
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  if (user && isStudentArea && role === "recruiter") {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = "/"
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  if (user && isRecruiterArea && role !== "recruiter") {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = "/student"
     return NextResponse.redirect(redirectUrl)
   }
 

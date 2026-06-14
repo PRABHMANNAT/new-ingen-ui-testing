@@ -21,7 +21,8 @@ const SUGGESTIONS = [
 export default function GlobalWorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isStudentPage = pathname.startsWith("/student")
-  const isSherlockPage = pathname.startsWith("/analyse-profile") || pathname.startsWith("/interviews") || pathname.startsWith("/interview-pack") || pathname.startsWith("/chat") || pathname.startsWith("/job-brief") || pathname.startsWith("/pm") || pathname.startsWith("/settings") || isStudentPage
+  const isRecruiterWorkspace = pathname === "/" || pathname.startsWith("/recruiter")
+  const isSherlockPage = pathname.startsWith("/analyse-profile") || pathname.startsWith("/interviews") || pathname.startsWith("/interview-pack") || pathname.startsWith("/chat") || pathname.startsWith("/job-brief") || pathname.startsWith("/pm") || pathname.startsWith("/settings") || isStudentPage || isRecruiterWorkspace
 
   // Auth pages render full-screen without the app chrome (sidebar / search panel).
   const isBarePage = pathname === "/student/login" || pathname.startsWith("/auth")
