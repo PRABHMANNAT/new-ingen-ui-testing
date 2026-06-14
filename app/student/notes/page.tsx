@@ -836,7 +836,7 @@ function AristotlePanel({
       <div className="relative">
         <AristotleLogo active={isTailoring} />
         <p className="mt-7 text-[10px] font-black uppercase tracking-[0.34em] text-[#7C5CFF]">Aristotle</p>
-        <h1 className="mt-3 text-2xl font-black tracking-[-0.06em] text-[#251F1A] dark:text-white">
+        <h1 className="mt-3 text-lg font-black tracking-[-0.04em] text-[#251F1A] dark:text-white">
           Who&apos;s the role you&apos;re tailoring for?
         </h1>
         <p className="mt-3 text-sm font-semibold leading-6 text-[#756B63] dark:text-white/50">
@@ -972,7 +972,7 @@ function ProfileHeaderCard({
               {profile.targetRole}
             </span>
           </div>
-          <h1 className="mt-3 text-4xl font-black uppercase tracking-[-0.08em] text-[#251F1A] dark:text-white">Veer Virk</h1>
+          <h1 className="mt-3 text-2xl font-black uppercase tracking-[-0.08em] text-[#251F1A] dark:text-white">Veer Virk</h1>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[12px] font-bold text-[#756B63] dark:text-white/50">
             <span className="inline-flex items-center gap-1.5">
               <GraduationCap size={15} className="text-[#7C5CFF]" />
@@ -1073,7 +1073,7 @@ function StatsRow() {
           <p className={cn("inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]", stat.tone)}>
             {stat.label}
           </p>
-          <p className="mt-4 text-4xl font-black tracking-[-0.08em] text-[#251F1A] dark:text-white">{stat.value}</p>
+          <p className="mt-4 text-2xl font-black tracking-[-0.08em] text-[#251F1A] dark:text-white">{stat.value}</p>
         </div>
       ))}
     </section>
@@ -1122,7 +1122,7 @@ function EvidenceBoxesSection({ boxes }: { boxes: EvidenceBox[] }) {
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#8A8177] dark:text-white/35">Recruiter evidence</p>
-          <h2 className="mt-1 text-2xl font-black tracking-[-0.06em] text-[#251F1A] dark:text-white">Tailored signal boxes</h2>
+          <h2 className="mt-1 text-lg font-black tracking-[-0.04em] text-[#251F1A] dark:text-white">Tailored signal boxes</h2>
         </div>
         <span className="hidden rounded-full bg-[#EEE9FF] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#6B4EF6] sm:inline-flex dark:bg-[#7C5CFF]/12 dark:text-[#C9BEFF]">
           {boxes.length} added
@@ -1170,7 +1170,7 @@ function ExperienceSection({ experiences }: { experiences: ExperienceItem[] }) {
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#8A8177] dark:text-white/35">Experience</p>
-          <h2 className="mt-1 text-2xl font-black tracking-[-0.06em] text-[#251F1A] dark:text-white">Work and leadership timeline</h2>
+          <h2 className="mt-1 text-lg font-black tracking-[-0.04em] text-[#251F1A] dark:text-white">Work and leadership timeline</h2>
         </div>
         <span className="hidden rounded-full bg-[#E7FFF4] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#158A56] sm:inline-flex">
           {experiences.length} entries
@@ -1274,7 +1274,7 @@ function VerifiedProofSection({ projects }: { projects: Project[] }) {
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#8A8177] dark:text-white/35">Verified proof</p>
-          <h2 className="mt-1 text-2xl font-black tracking-[-0.06em] text-[#251F1A] dark:text-white">Project evidence stack</h2>
+          <h2 className="mt-1 text-lg font-black tracking-[-0.04em] text-[#251F1A] dark:text-white">Project evidence stack</h2>
         </div>
         <span className="hidden rounded-full bg-[#E7FFF4] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#158A56] sm:inline-flex">
           4 proofs
@@ -1390,7 +1390,7 @@ function RecruiterInsightsPanel({ profile, profileStrength }: { profile: Profile
           <ReadinessBar label="Backend" value={profile.readiness.backend} />
           <ReadinessBar label="AI product" value={profile.readiness.aiProduct} />
           <div className="mt-4 rounded-[22px] bg-[#EEE9FF] p-4 text-[#6B4EF6] dark:bg-[#7C5CFF]/12 dark:text-[#C9BEFF]">
-            <p className="text-4xl font-black tracking-[-0.08em]">{profileStrength}%</p>
+            <p className="text-2xl font-black tracking-[-0.08em]">{profileStrength}%</p>
             <p className="text-[10px] font-black uppercase tracking-[0.18em]">overall recruiter readiness</p>
           </div>
         </InsightCard>
