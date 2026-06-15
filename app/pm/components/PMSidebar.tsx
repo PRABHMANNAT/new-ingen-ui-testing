@@ -118,41 +118,6 @@ export default function PMSidebar() {
 
             {/* Bottom Actions */}
             <div className={cn("mt-auto flex flex-col gap-2 w-full", isExpanded ? "px-2" : "px-0 items-center")}>
-                <Link
-                    href="/settings"
-                    className={cn(
-                    "h-10 flex items-center transition-all duration-200 relative group w-full",
-                    isExpanded ? "justify-start px-2" : "justify-center",
-                    pathname.startsWith("/settings") && "text-[#DF5F12]"
-                )}>
-                    {pathname.startsWith("/settings") && (
-                        <div className={cn(
-                            "absolute left-0 w-1 h-6 bg-[#FF6B00] rounded-r-full shadow-[0_0_12px_rgba(255,107,0,0.6)] transition-all duration-300",
-                            isExpanded ? "-left-4" : "left-0"
-                        )} />
-                    )}
-                    <div className={cn(
-                        "relative flex items-center justify-center w-10 h-10 rounded-xl transition-all",
-                        pathname.startsWith("/settings")
-                            ? "text-[#DF5F12]"
-                            : "text-[#241f18]/45 group-hover:text-[#241f18] group-hover:bg-[#241f18]/5 dark:group-hover:bg-black/5 dark:text-white/40 dark:group-hover:text-white dark:group-hover:bg-white/5"
-                    )}>
-                        <Settings className="w-5 h-5" />
-                    </div>
-                    <span className={cn(
-                        "text-sm font-medium whitespace-nowrap overflow-hidden transition-all duration-300 ml-3",
-                        pathname.startsWith("/settings") ? "text-[#241f18] dark:text-white" : "text-[#241f18]/60 group-hover:text-[#241f18] dark:text-white/60 dark:group-hover:text-white",
-                        isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 absolute"
-                    )}>
-                        Settings
-                    </span>
-                    {!isExpanded && (
-                        <div className="absolute left-16 px-3 py-1.5 bg-[#fffaf2] border border-[#ded2c2] rounded-lg text-xs font-medium text-[#241f18] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[60] shadow-xl dark:bg-[#1A1A1A] dark:border-white/10 dark:text-white">
-                            Settings
-                        </div>
-                    )}
-                </Link>
-
                 <button
                     type="button"
                     aria-label={themeLabel}
@@ -179,10 +144,14 @@ export default function PMSidebar() {
                     )}
                 </button>
 
-                <div className={cn(
-                    "flex items-center rounded-xl transition-all duration-300",
-                    isExpanded ? "bg-[#241f18]/5 dark:bg-black/5 pr-4 p-1 gap-3 dark:bg-white/5" : "p-0 justify-center w-10 h-10"
-                )}>
+                <Link
+                    href="/settings"
+                    title="Settings"
+                    className={cn(
+                        "flex items-center rounded-xl transition-all duration-300 hover:bg-[#241f18]/10 dark:hover:bg-white/10",
+                        isExpanded ? "bg-[#241f18]/5 dark:bg-black/5 pr-4 p-1 gap-3 dark:bg-white/5" : "p-0 justify-center w-10 h-10"
+                    )}
+                >
                     <div className="w-8 h-8 rounded-full ring-2 ring-[#241f18]/10 dark:ring-white/10 shrink-0 overflow-hidden bg-[#241f18]">
                         <img
                             src="https://api.dicebear.com/9.x/notionists/svg?seed=Adhiraj%20Dogra"
@@ -197,7 +166,7 @@ export default function PMSidebar() {
                         <span className="text-xs font-semibold text-[#241f18] whitespace-nowrap dark:text-white">Adhiraj</span>
                         <span className="text-[10px] text-[#241f18]/45 whitespace-nowrap dark:text-white/40">PM</span>
                     </div>
-                </div>
+                </Link>
             </div>
         </div>
     )
