@@ -32,7 +32,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "FORGE — Proof-first hiring",
+  title: "Ingen Recruiter Platform",
   description: "Rank candidates with auditable evidence in under 60 seconds.",
   generator: 'v0.app'
 }
