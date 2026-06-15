@@ -260,7 +260,7 @@ async function verifyImage(url: string): Promise<VerifyResult> {
         body: JSON.stringify({
           model,
           response_format: { type: "json_object" },
-          max_tokens: 500,
+          max_completion_tokens: 500,
           temperature: 0,
           messages: [
             { role: "system", content: system },
