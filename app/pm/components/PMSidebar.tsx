@@ -8,11 +8,8 @@ import { IngenLogo } from "@/components/ingen-logo"
 import { useAppTheme } from "@/components/theme/ThemeProvider"
 import { themeClasses } from "@/lib/theme"
 import {
-    Brain,
     LayoutDashboard,
     Users,
-    Settings,
-    Search,
     Sun,
     Moon,
     FileText,
