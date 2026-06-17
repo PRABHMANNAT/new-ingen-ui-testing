@@ -8,17 +8,17 @@ import {
   BadgeCheck,
   BookmarkCheck,
   BriefcaseBusiness,
-  Clock3,
   Layers3,
   Map as MapIcon,
+  SearchCheck,
   Sparkles,
   Star,
   UserRound,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type CollectionKind = "profile" | "job" | "roadmap"
-type FilterId = "all" | "profile" | "job" | "roadmap"
+type CollectionKind = "profile" | "job" | "roadmap" | "sherlock_report"
+type FilterId = "all" | "profile" | "job" | "roadmap" | "sherlock_report"
 
 type CollectionItem = {
   id: string
@@ -51,6 +51,7 @@ const FILTERS: { id: FilterId; label: string }[] = [
   { id: "profile", label: "Saved Profiles" },
   { id: "job", label: "Jobs" },
   { id: "roadmap", label: "Roadmaps" },
+  { id: "sherlock_report", label: "Sherlock Reports" },
 ]
 
 const MOCK_ITEMS: CollectionItem[] = [
@@ -242,6 +243,7 @@ export default function StudentCollectionsPage() {
       profile: allItems.filter((item) => item.kind === "profile").length,
       job: allItems.filter((item) => item.kind === "job").length,
       roadmap: allItems.filter((item) => item.kind === "roadmap").length,
+      sherlock: allItems.filter((item) => item.kind === "sherlock_report").length,
       ready: allItems.filter((item) => (item.progress ?? 0) >= 90).length,
     }),
     [allItems]
@@ -289,7 +291,7 @@ export default function StudentCollectionsPage() {
           <CollectionSummaryStat icon={UserRound} label="Saved profiles" value={counts.profile} tone="purple" />
           <CollectionSummaryStat icon={BriefcaseBusiness} label="Job shortlist" value={counts.job} tone="orange" />
           <CollectionSummaryStat icon={MapIcon} label="Roadmaps" value={counts.roadmap} tone="teal" />
-          <CollectionSummaryStat icon={Clock3} label="High-signal saves" value={counts.ready} tone="dark" />
+          <CollectionSummaryStat icon={SearchCheck} label="Sherlock reports" value={counts.sherlock} tone="dark" />
         </section>
 
         <motion.div layout className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -303,7 +305,7 @@ export default function StudentCollectionsPage() {
 }
 
 function CollectionCard({ item }: { item: CollectionItem }) {
-  const Icon = item.kind === "profile" ? UserRound : item.kind === "job" ? BriefcaseBusiness : MapIcon
+  const Icon = item.kind === "profile" ? UserRound : item.kind === "job" ? BriefcaseBusiness : item.kind === "roadmap" ? MapIcon : SearchCheck
   const tone =
     item.kind === "profile"
       ? {
@@ -319,12 +321,19 @@ function CollectionCard({ item }: { item: CollectionItem }) {
             ring: "ring-[#FF8A1D]/18",
             progress: "bg-[#FF8A1D]",
           }
-        : {
+        : item.kind === "roadmap"
+          ? {
             text: "text-[#00BFB0]",
             soft: "bg-[#B7F4EA] text-[#008E84]",
             ring: "ring-[#00BFB0]/18",
             progress: "bg-[#00BFB0]",
           }
+          : {
+              text: "text-[#1F2A38]",
+              soft: "bg-[#E8ECF4] text-[#1F2A38]",
+              ring: "ring-[#1F2A38]/12",
+              progress: "bg-[#1F2A38]",
+            }
 
   return (
     <motion.article
@@ -550,6 +559,53 @@ function loadStoredItems(): CollectionItem[] {
   const items: CollectionItem[] = []
 
   try {
+    const savedSherlockReports = JSON.parse(localStorage.getItem("sherlock-saved-reports-v1") || "[]") as Array<{
+      id?: string
+      title?: string
+      savedAt?: string
+      summary?: string
+      description?: string
+      tags?: string[]
+      href?: string
+      artifact?: {
+        summary?: {
+          verified?: number
+          contradicted?: number
+          needsAlternativeProof?: number
+        }
+        targetRole?: string
+      }
+    }>
+
+    savedSherlockReports.forEach((report, index) => {
+      if (!report.title) return
+      const verified = report.artifact?.summary?.verified ?? 0
+      const contradicted = report.artifact?.summary?.contradicted ?? 0
+      const proofRoutes = report.artifact?.summary?.needsAlternativeProof ?? 0
+      items.push({
+        id: `stored-sherlock-${report.id ?? index}`,
+        kind: "sherlock_report",
+        title: report.title,
+        eyebrow: "Sherlock Report",
+        savedAt: formatSavedDate(report.savedAt),
+        summary: report.summary ?? `${verified} verified, ${contradicted} contradicted, ${proofRoutes} proof routes.`,
+        description: report.description ?? "Evidence-only verification report. Human decision required.",
+        tags: (report.tags ?? ["Evidence", "Audit", "Interview"]).slice(0, 4),
+        meta: "Evidence report",
+        href: report.href ?? "/analyse-profile",
+        actionLabel: "Open Report",
+        initials: "SH",
+        progress: 0,
+        status: report.artifact?.targetRole ?? "Human review",
+        lastOpened: "Saved now",
+        highlight: "No score, no ranking",
+      })
+    })
+  } catch {
+    // Ignore malformed Sherlock reports.
+  }
+
+  try {
     const savedRoles = JSON.parse(localStorage.getItem("nexus-student-saved-roles") || "[]") as Array<{
       id?: string
       company?: string
@@ -616,4 +672,11 @@ function loadStoredItems(): CollectionItem[] {
   }
 
   return items
+}
+
+function formatSavedDate(value?: string) {
+  if (!value) return "Saved now"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "Saved now"
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
 }
