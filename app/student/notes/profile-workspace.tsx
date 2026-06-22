@@ -632,7 +632,6 @@ function buildLogoSources(name: string, domain?: string, logoUrl?: string): stri
   const out: string[] = []
   if (logoUrl) out.push(logoUrl)
   if (d) {
-    out.push(`https://logo.clearbit.com/${d}`)
     out.push(`https://www.google.com/s2/favicons?domain=${d}&sz=128`)
   }
   return out
